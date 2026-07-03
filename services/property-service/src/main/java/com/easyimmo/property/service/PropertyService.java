@@ -217,6 +217,15 @@ public class PropertyService {
         property.setCurrentRent(newRent);
     }
 
+    @Transactional
+    public void updatePropertyStatus(UUID propertyId, Property.PropertyStatus newStatus) {
+        Property property = propertyRepository.findById(propertyId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bien immobilier introuvable"));
+        property.setStatus(newStatus);
+        propertyRepository.save(property);
+        log.info("Statut du bien {} mis à jour à : {}", propertyId, newStatus);
+    }
+
     public Page<PropertyResponse> getAvailablePropertiesPublic(
             String city, BigDecimal minRent, BigDecimal maxRent, Property.PropertyType type, String search, Pageable pageable) {
         

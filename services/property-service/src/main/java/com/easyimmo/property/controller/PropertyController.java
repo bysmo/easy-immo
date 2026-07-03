@@ -166,4 +166,16 @@ public class PropertyController {
         
         return ResponseEntity.ok(propertyService.updateRent(agencyId, id, newRent, reason, agentId));
     }
+
+    /**
+     * Mettre à jour le statut du bien (AVAILABLE/OCCUPIED...)
+     */
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('AGENCY_ADMIN', 'AGENCY_AGENT')")
+    public ResponseEntity<Void> updatePropertyStatus(
+            @PathVariable UUID id,
+            @RequestParam Property.PropertyStatus status) {
+        propertyService.updatePropertyStatus(id, status);
+        return ResponseEntity.ok().build();
+    }
 }
