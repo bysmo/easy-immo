@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>REÇU DE PAIEMENT</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #333;
+            margin: 0;
+            padding: 1.5cm;
+        }
+        .invoice-box {
+            max-width: 800px;
+            margin: auto;
+            border: 1px solid #eee;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+            padding: 30px;
+            background: #fff;
+        }
+        .header-table {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .header-table td {
+            vertical-align: top;
+        }
+        .logo-text {
+            font-size: 22px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .receipt-title {
+            text-align: right;
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            text-transform: uppercase;
+        }
+        .details-table {
+            width: 100%;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+        .details-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .details-table td.label {
+            font-weight: bold;
+            color: #7f8c8d;
+            width: 30%;
+        }
+        .amount-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #2ecc71;
+            padding: 15px;
+            font-size: 14pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        .signature-section {
+            margin-top: 50px;
+            text-align: right;
+            padding-right: 50px;
+        }
+        .stamp-box {
+            display: inline-block;
+            border: 1px dashed #bdc3c7;
+            padding: 20px;
+            width: 150px;
+            height: 100px;
+            text-align: center;
+            vertical-align: middle;
+            color: #95a5a6;
+            font-size: 8pt;
+            margin-top: 10px;
+        }
+        .footer {
+            text-align: center;
+            font-size: 8pt;
+            color: #bdc3c7;
+            margin-top: 50px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="invoice-box">
+        <table class="header-table">
+            <tr>
+                <td>
+                    <div class="logo-text">Easy-Immo</div>
+                    <span th:text="${agencyName}">[Nom Agence]</span><br/>
+                    <span th:text="${agencyPhone}">[Tel Agence]</span><br/>
+                    <span th:text="${agencyEmail}">[Email Agence]</span>
+                </td>
+                <td>
+                    <div class="receipt-title" th:text="${receiptTitle}">QUITTANCE DE LOYER</div>
+                    <div style="text-align: right; font-size: 9pt; color: #7f8c8d;">
+                        Reçu N° <span th:text="${receiptNumber}">REC-100412</span><br/>
+                        Date : <span th:text="${paymentDate}">01/07/2026</span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="amount-box">
+            Montant Payé : <span th:text="${amountPaid}">150 000 XOF</span> (Franc CFA)
+        </div>
+
+        <table class="details-table">
+            <tr>
+                <td class="label">Locataire :</td>
+                <td th:text="${tenantName}">[Nom Locataire]</td>
+            </tr>
+            <tr th:if="${period != null}">
+                <td class="label">Période concernée :</td>
+                <td th:text="${period}">[Période]</td>
+            </tr>
+            <tr>
+                <td class="label">Logement loué :</td>
+                <td>
+                    <span th:text="${propertyRef}">[Réf Propriété]</span> - 
+                    <span th:text="${propertyAddress}">[Adresse]</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">Mode de règlement :</td>
+                <td th:text="${paymentMethod}">[Méthode de paiement]</td>
+            </tr>
+            <tr th:if="${transactionRef != null}">
+                <td class="label">Réf. transaction :</td>
+                <td th:text="${transactionRef}">[Réf. transaction]</td>
+            </tr>
+        </table>
+
+        <p style="font-size: 9pt; font-style: italic; color: #7f8c8d;">
+            Ce document tient lieu de quittance ou reçu officiel de paiement sous réserve de l'encaissement effectif des fonds.
+        </p>
+
+        <div class="signature-section">
+            <strong>Pour l'Agence (Le gérant)</strong><br/>
+            <div class="stamp-box">
+                Signature &amp; Cachet
+            </div>
+        </div>
+
+        <div class="footer">
+            Reçu certifié et généré par la plateforme SaaS Easy-Immo. ID unique : <span th:text="${paymentId}">[ID]</span>
+        </div>
+    </div>
+
+</body>
+</html>

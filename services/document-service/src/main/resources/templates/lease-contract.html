@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>CONTRAT DE BAIL D'HABITATION</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.5;
+            color: #333;
+            margin: 0;
+            padding: 1cm;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 2cm;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 10px;
+        }
+        .header h1 {
+            font-size: 20pt;
+            color: #2c3e50;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .header p {
+            margin: 5px 0 0;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+        .section {
+            margin-bottom: 1.5cm;
+        }
+        .section-title {
+            font-size: 13pt;
+            font-weight: bold;
+            color: #2c3e50;
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        .parties {
+            margin-bottom: 1cm;
+        }
+        .party {
+            margin-bottom: 0.5cm;
+        }
+        .party-role {
+            font-weight: bold;
+            color: #34495e;
+            text-decoration: underline;
+        }
+        .grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .grid td {
+            padding: 6px;
+            vertical-align: top;
+        }
+        .grid td.label {
+            font-weight: bold;
+            width: 35%;
+        }
+        .signatures {
+            margin-top: 3cm;
+            width: 100%;
+        }
+        .signatures td {
+            width: 50%;
+            text-align: center;
+        }
+        .signature-box {
+            border: 1px dashed #bdc3c7;
+            height: 3cm;
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 9pt;
+            color: #7f8c8d;
+        }
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 8pt;
+            color: #95a5a6;
+            border-top: 1px solid #ecf0f1;
+            padding-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Contrat de Bail d'Habitation</h1>
+        <p>Établi conformément à la législation en vigueur dans les pays de l'UEMOA</p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Entre les soussignés :</div>
+        <div class="parties">
+            <div class="party">
+                <span class="party-role">Le Bailleur :</span> Representé par l'agence immobilière 
+                <strong th:text="${agencyName}">[Nom Agence]</strong>, agissant au nom et pour le compte du propriétaire du logement.
+            </div>
+            <div class="party">
+                <span class="party-role">Le Preneur (Locataire) :</span> 
+                <strong th:text="${tenantName}">[Nom Locataire]</strong>, de nationalité <span th:text="${tenantNationality ?: 'non spécifiée'}">N/A</span>, 
+                titulaire de la pièce d'identité N° <strong th:text="${tenantNationalId ?: 'Non fournie'}">N/A</strong>, 
+                exerçant la profession de <span th:text="${tenantProfession ?: 'Non spécifiée'}">N/A</span>.
+            </div>
+        </div>
+        <p>Il a été convenu et arrêté ce qui suit concernant la location du bien immobilier décrit ci-après.</p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Article 1 : Description du bien et destination</div>
+        <table class="grid">
+            <tr>
+                <td class="label">Adresse du bien :</td>
+                <td th:text="${propertyAddress}">[Adresse Propriété]</td>
+            </tr>
+            <tr>
+                <td class="label">Ville &amp; Pays :</td>
+                <td><span th:text="${propertyCity}">[Ville]</span>, <span th:text="${propertyCountry}">[Pays]</span></td>
+            </tr>
+            <tr>
+                <td class="label">Type de logement :</td>
+                <td th:text="${propertyType}">[Type Logement]</td>
+            </tr>
+            <tr>
+                <td class="label">Nombre de pièces :</td>
+                <td th:text="${propertyRooms ?: '1'}">1</td>
+            </tr>
+        </table>
+        <p>Le logement est loué exclusivement à usage d'habitation.</p>
+    </div>
+
+    <div class="section" style="page-break-before: always;">
+        <div class="section-title">Article 2 : Durée du contrat et prise d'effet</div>
+        <p>Le présent bail est consenti pour une durée déterminée prenant effet le <strong th:text="${startDate}">[Date début]</strong> 
+        et se terminant le <strong th:text="${endDate ?: 'Indéterminée (bail tacite)'}">[Date fin]</strong>.</p>
+        <p>À défaut de congé donné par l'une des parties avec un préavis légal de trois (3) mois, le contrat est renouvelé par tacite reconduction.</p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Article 3 : Conditions financières</div>
+        <p>La présente location est consentie et acceptée sous les conditions financières suivantes :</p>
+        <table class="grid">
+            <tr>
+                <td class="label">Loyer Mensuel :</td>
+                <td><strong th:text="${rentAmount}">[Montant Loyer]</strong> XOF (Franc CFA)</td>
+            </tr>
+            <tr>
+                <td class="label">Date de paiement :</td>
+                <td>Au plus tard le <strong th:text="${paymentDay}">5</strong> de chaque mois échu.</td>
+            </tr>
+            <tr>
+                <td class="label">Dépôt de Garantie (Caution) :</td>
+                <td><strong th:text="${depositAmount}">[Montant Caution]</strong> XOF (restituable en fin de bail après état des lieux).</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Article 4 : Obligations du locataire</div>
+        <p>Le locataire s'oblige à :</p>
+        <ul>
+            <li>Payer le loyer aux échéances convenues.</li>
+            <li>User paisiblement des locaux et ne faire aucun changement de distribution ou travaux sans l'accord écrit du bailleur.</li>
+            <li>Répondre des dégradations et pertes qui surviennent pendant la durée du contrat dans les locaux dont il a la jouissance exclusive.</li>
+        </ul>
+    </div>
+
+    <table class="signatures">
+        <tr>
+            <td>
+                <strong>Le Locataire</strong><br/>
+                (Précédé de la mention "Lu et approuvé")
+                <div class="signature-box">Signature</div>
+            </td>
+            <td>
+                <strong>Pour le Bailleur (L'Agence)</strong><br/>
+                (Signature et Cachet)
+                <div class="signature-box">Signature et cachet agence</div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="footer">
+        Document généré par Easy-Immo - Contrat de bail certifié. ID unique : <span th:text="${leaseId}">[ID]</span>
+    </div>
+
+</body>
+</html>
