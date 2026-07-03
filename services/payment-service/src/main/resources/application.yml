@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: PAYMENT-SERVICE
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5436/easy_immo_payment}
+    username: ${SPRING_DATASOURCE_USERNAME:easy_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:pgpass123}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: 5672
+    username: ${RABBITMQ_USER:easy}
+    password: ${RABBITMQ_PASS:easy123}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/easy-immo
+
+# MTN MoMo Credentials Sandbox
+mtn:
+  momo:
+    subscription-key: ${MTN_MOMO_SUBSCRIPTION_KEY:}
+    base-url: ${MTN_MOMO_BASE_URL:https://sandbox.momodeveloper.mtn.com}
+
+# Orange Money WebPay Credentials Sandbox
+orange:
+  money:
+    client-id: ${ORANGE_MONEY_CLIENT_ID:}
+    client-secret: ${ORANGE_MONEY_CLIENT_SECRET:}
+    base-url: ${ORANGE_MONEY_BASE_URL:https://api.orange.com}
+
+server:
+  port: 8085
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761}/eureka/
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
