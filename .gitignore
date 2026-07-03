@@ -1,0 +1,51 @@
+# Java
+target/
+*.class
+*.jar
+*.war
+.mvn/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Node.js
+node_modules/
+dist/
+.expo/
+.next/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# Env
+.env
+*.env.local
+*.env.production
+
+# Docker
+.docker/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Spring Boot
+HELP.md
+mvnw
+mvnw.cmd
+
+# Keycloak data
+infrastructure/keycloak/data/
+
+# MinIO data
+infrastructure/minio/data/
+
+# Postgres data
+infrastructure/postgres/data*/

@@ -1,0 +1,144 @@
+{
+  "realm": "easy-immo",
+  "displayName": "Easy-Immo Platform",
+  "displayNameHtml": "<strong>Easy-Immo</strong>",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 5,
+  "accessTokenLifespan": 900,
+  "refreshTokenMaxReuse": 0,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "roles": {
+    "realm": [
+      {
+        "name": "SAAS_ADMIN",
+        "description": "Administrateur de la plateforme Easy-Immo"
+      },
+      {
+        "name": "AGENCY_ADMIN",
+        "description": "Administrateur d'une agence immobilière"
+      },
+      {
+        "name": "AGENCY_AGENT",
+        "description": "Agent commercial d'une agence"
+      },
+      {
+        "name": "TENANT",
+        "description": "Locataire (utilisateur mobile)"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "easy-immo-web",
+      "name": "Easy-Immo Web Portal",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://app.localhost/*",
+        "https://app.easy-immo.com/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "http://app.localhost",
+        "https://app.easy-immo.com"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "easy-immo-mobile",
+      "name": "Easy-Immo Mobile App",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "easyimmo://auth/*",
+        "exp://localhost:8081/*"
+      ],
+      "webOrigins": ["*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "easy-immo-backend",
+      "name": "Easy-Immo Backend Services",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "secret": "change-me-in-production",
+      "redirectUris": [],
+      "webOrigins": []
+    }
+  ],
+  "protocolMappers": [],
+  "clientScopes": [
+    {
+      "name": "agency-id",
+      "description": "Claims Agence ID",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "agency_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "agency_id",
+            "claim.name": "agency_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "superadmin",
+      "email": "admin@easy-immo.com",
+      "firstName": "Super",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Admin@12345",
+          "temporary": true
+        }
+      ],
+      "realmRoles": ["SAAS_ADMIN"]
+    }
+  ],
+  "browserFlow": "browser",
+  "registrationFlow": "registration",
+  "directGrantFlow": "direct grant",
+  "resetCredentialsFlow": "reset credentials",
+  "clientAuthenticationFlow": "clients",
+  "dockerAuthenticationFlow": "docker auth"
+}

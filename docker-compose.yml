@@ -1,0 +1,559 @@
+version: '3.9'
+
+networks:
+  easy-immo-net:
+    driver: bridge
+
+volumes:
+  pgdata-tenant:
+  pgdata-property:
+  pgdata-lease:
+  pgdata-payment:
+  pgdata-billing:
+  pgdata-notification:
+  redis-data:
+  rabbitmq-data:
+  minio-data:
+  keycloak-data:
+
+services:
+
+  # ═══════════════════════════════════════════════════════
+  # INFRASTRUCTURE
+  # ═══════════════════════════════════════════════════════
+
+  traefik:
+    image: traefik:v2.11
+    container_name: easy-traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--log.level=INFO"
+    ports:
+      - "80:80"
+      - "8090:8080"   # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: easy-keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db-keycloak:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    volumes:
+      - ./infrastructure/keycloak/realms:/opt/keycloak/data/import
+    ports:
+      - "8180:8080"
+    depends_on:
+      db-keycloak:
+        condition: service_healthy
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak.rule=Host(`keycloak.localhost`)"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+
+  db-keycloak:
+    image: postgres:16-alpine
+    container_name: easy-db-keycloak
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: easy-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis123}
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: easy-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-easy}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-easy123}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./infrastructure/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
+      - ./infrastructure/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: easy-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: easy-zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: easy-mailpit
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: easy-prometheus
+    volumes:
+      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: easy-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin123}
+    volumes:
+      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3001:3000"
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  # ═══════════════════════════════════════════════════════
+  # SPRING CLOUD INFRASTRUCTURE
+  # ═══════════════════════════════════════════════════════
+
+  config-server:
+    build:
+      context: ./services/config-server
+      dockerfile: Dockerfile
+    container_name: easy-config-server
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "8888:8888"
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+
+  eureka-server:
+    build:
+      context: ./services/eureka-server
+      dockerfile: Dockerfile
+    container_name: easy-eureka
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+    ports:
+      - "8761:8761"
+    depends_on:
+      config-server:
+        condition: service_healthy
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: easy-gateway
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      KEYCLOAK_URL: http://keycloak:8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gateway.rule=Host(`api.localhost`)"
+      - "traefik.http.services.gateway.loadbalancer.server.port=8080"
+
+  # ═══════════════════════════════════════════════════════
+  # BUSINESS MICROSERVICES
+  # ═══════════════════════════════════════════════════════
+
+  tenant-service:
+    build:
+      context: ./services/tenant-service
+      dockerfile: Dockerfile
+    container_name: easy-tenant-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-tenant:5432/easy_immo_tenant
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER:-easy}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-easy123}
+    ports:
+      - "8082:8082"
+    depends_on:
+      db-tenant:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+
+  property-service:
+    build:
+      context: ./services/property-service
+      dockerfile: Dockerfile
+    container_name: easy-property-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-property:5432/easy_immo_property
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    ports:
+      - "8083:8083"
+    depends_on:
+      db-property:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+
+  lease-service:
+    build:
+      context: ./services/lease-service
+      dockerfile: Dockerfile
+    container_name: easy-lease-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-lease:5432/easy_immo_lease
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER:-easy}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-easy123}
+    ports:
+      - "8084:8084"
+    depends_on:
+      db-lease:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+
+  payment-service:
+    build:
+      context: ./services/payment-service
+      dockerfile: Dockerfile
+    container_name: easy-payment-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-payment:5432/easy_immo_payment
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
+      RABBITMQ_HOST: rabbitmq
+      MTN_MOMO_BASE_URL: ${MTN_MOMO_BASE_URL}
+      MTN_MOMO_SUBSCRIPTION_KEY: ${MTN_MOMO_SUBSCRIPTION_KEY}
+      ORANGE_MONEY_CLIENT_ID: ${ORANGE_MONEY_CLIENT_ID}
+      ORANGE_MONEY_CLIENT_SECRET: ${ORANGE_MONEY_CLIENT_SECRET}
+    ports:
+      - "8085:8085"
+    depends_on:
+      db-payment:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+
+  document-service:
+    build:
+      context: ./services/document-service
+      dockerfile: Dockerfile
+    container_name: easy-document-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    ports:
+      - "8086:8086"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: easy-notification-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER:-easy}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-easy123}
+      FCM_SERVER_KEY: ${FCM_SERVER_KEY}
+      AFRICAS_TALKING_API_KEY: ${AFRICAS_TALKING_API_KEY}
+      AFRICAS_TALKING_USERNAME: ${AFRICAS_TALKING_USERNAME:-sandbox}
+      SPRING_MAIL_HOST: mailpit
+      SPRING_MAIL_PORT: 1025
+    ports:
+      - "8087:8087"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+
+  billing-service:
+    build:
+      context: ./services/billing-service
+      dockerfile: Dockerfile
+    container_name: easy-billing-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-billing:5432/easy_immo_billing
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
+    ports:
+      - "8088:8088"
+    depends_on:
+      db-billing:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════
+  # FRONTEND
+  # ═══════════════════════════════════════════════════════
+
+  web-app:
+    build:
+      context: ./web-app
+      dockerfile: Dockerfile
+    container_name: easy-web-app
+    ports:
+      - "5173:80"
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.webapp.rule=Host(`app.localhost`)"
+      - "traefik.http.services.webapp.loadbalancer.server.port=80"
+
+  # ═══════════════════════════════════════════════════════
+  # BASES DE DONNÉES (une par service)
+  # ═══════════════════════════════════════════════════════
+
+  db-tenant:
+    image: postgres:16-alpine
+    container_name: easy-db-tenant
+    environment:
+      POSTGRES_DB: easy_immo_tenant
+      POSTGRES_USER: easy_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
+    volumes:
+      - pgdata-tenant:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U easy_user -d easy_immo_tenant"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db-property:
+    image: postgres:16-alpine
+    container_name: easy-db-property
+    environment:
+      POSTGRES_DB: easy_immo_property
+      POSTGRES_USER: easy_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
+    volumes:
+      - pgdata-property:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U easy_user -d easy_immo_property"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db-lease:
+    image: postgres:16-alpine
+    container_name: easy-db-lease
+    environment:
+      POSTGRES_DB: easy_immo_lease
+      POSTGRES_USER: easy_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
+    volumes:
+      - pgdata-lease:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U easy_user -d easy_immo_lease"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db-payment:
+    image: postgres:16-alpine
+    container_name: easy-db-payment
+    environment:
+      POSTGRES_DB: easy_immo_payment
+      POSTGRES_USER: easy_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
+    volumes:
+      - pgdata-payment:/var/lib/postgresql/data
+    ports:
+      - "5436:5432"
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U easy_user -d easy_immo_payment"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db-billing:
+    image: postgres:16-alpine
+    container_name: easy-db-billing
+    environment:
+      POSTGRES_DB: easy_immo_billing
+      POSTGRES_USER: easy_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
+    volumes:
+      - pgdata-billing:/var/lib/postgresql/data
+    ports:
+      - "5437:5432"
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U easy_user -d easy_immo_billing"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

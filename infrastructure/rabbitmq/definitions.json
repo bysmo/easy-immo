@@ -1,0 +1,20 @@
+{
+  "vhosts": [{"name": "/"}],
+  "exchanges": [
+    {"name": "easy-immo.exchange", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false}
+  ],
+  "queues": [
+    {"name": "lease.created.queue", "vhost": "/", "durable": true, "auto_delete": false},
+    {"name": "payment.received.queue", "vhost": "/", "durable": true, "auto_delete": false},
+    {"name": "rent.due.queue", "vhost": "/", "durable": true, "auto_delete": false},
+    {"name": "agency.suspended.queue", "vhost": "/", "durable": true, "auto_delete": false},
+    {"name": "invoice.generated.queue", "vhost": "/", "durable": true, "auto_delete": false}
+  ],
+  "bindings": [
+    {"source": "easy-immo.exchange", "vhost": "/", "destination": "lease.created.queue", "destination_type": "queue", "routing_key": "lease.created"},
+    {"source": "easy-immo.exchange", "vhost": "/", "destination": "payment.received.queue", "destination_type": "queue", "routing_key": "payment.received"},
+    {"source": "easy-immo.exchange", "vhost": "/", "destination": "rent.due.queue", "destination_type": "queue", "routing_key": "rent.due"},
+    {"source": "easy-immo.exchange", "vhost": "/", "destination": "agency.suspended.queue", "destination_type": "queue", "routing_key": "agency.suspended"},
+    {"source": "easy-immo.exchange", "vhost": "/", "destination": "invoice.generated.queue", "destination_type": "queue", "routing_key": "invoice.generated"}
+  ]
+}

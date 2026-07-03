@@ -1,0 +1,160 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "export": "Exporter",
+    "actions": "Actions",
+    "status": "Statut",
+    "date": "Date",
+    "yes": "Oui",
+    "no": "Non",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "total": "Total",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "suspended": "Suspendu",
+    "all": "Tous",
+    "none": "Aucun"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "agencies": "Agences",
+    "plans": "Plans tarifaires",
+    "billing": "Facturation",
+    "settings": "Paramètres",
+    "owners": "Propriétaires",
+    "properties": "Biens immobiliers",
+    "tenants": "Locataires",
+    "leases": "Baux",
+    "payments": "Paiements",
+    "deposits": "Cautions",
+    "rents": "Loyers",
+    "disbursements": "Reversements",
+    "reports": "Rapports",
+    "logout": "Déconnexion"
+  },
+  "agency": {
+    "title": "Agences",
+    "create": "Nouvelle agence",
+    "name": "Nom de l'agence",
+    "email": "Email",
+    "phone": "Téléphone",
+    "address": "Adresse",
+    "city": "Ville",
+    "country": "Pays",
+    "plan": "Plan tarifaire",
+    "status": "Statut",
+    "admin": "Administrateur",
+    "suspend": "Suspendre",
+    "activate": "Activer",
+    "suspension_reason": "Raison de la suspension",
+    "created_at": "Créée le",
+    "trial_ends": "Période d'essai jusqu'au",
+    "statuses": {
+      "TRIAL": "Essai",
+      "ACTIVE": "Actif",
+      "SUSPENDED": "Suspendu",
+      "CANCELLED": "Annulé"
+    }
+  },
+  "property": {
+    "title": "Biens immobiliers",
+    "create": "Nouveau bien",
+    "reference": "Référence",
+    "type": "Type",
+    "address": "Adresse",
+    "city": "Ville",
+    "rooms": "Chambres",
+    "area": "Surface (m²)",
+    "rent": "Loyer mensuel",
+    "deposit": "Caution (mois)",
+    "status": "Statut",
+    "owner": "Propriétaire",
+    "photos": "Photos",
+    "description": "Description",
+    "statuses": {
+      "available": "Disponible",
+      "occupied": "Occupé",
+      "maintenance": "En réparation"
+    },
+    "types": {
+      "appartement": "Appartement",
+      "villa": "Villa",
+      "studio": "Studio",
+      "boutique": "Boutique",
+      "bureau": "Bureau",
+      "entrepot": "Entrepôt"
+    }
+  },
+  "lease": {
+    "title": "Baux",
+    "create": "Nouveau bail",
+    "start_date": "Date de début",
+    "end_date": "Date de fin",
+    "monthly_rent": "Loyer mensuel",
+    "deposit": "Caution",
+    "payment_day": "Jour de paiement",
+    "tenant": "Locataire",
+    "property": "Bien immobilier",
+    "contract": "Contrat de bail",
+    "download_contract": "Télécharger le contrat",
+    "generate_contract": "Générer le contrat",
+    "statuses": {
+      "active": "En cours",
+      "terminated": "Résilié",
+      "expired": "Expiré"
+    }
+  },
+  "payment": {
+    "title": "Paiements",
+    "amount": "Montant",
+    "paid_amount": "Montant payé",
+    "remaining": "Reste à payer",
+    "method": "Mode de paiement",
+    "date": "Date",
+    "receipt": "Reçu",
+    "methods": {
+      "cash": "Espèces",
+      "mtn_momo": "MTN Mobile Money",
+      "orange_money": "Orange Money",
+      "bank_transfer": "Virement bancaire"
+    },
+    "statuses": {
+      "pending": "En attente",
+      "partial": "Partiel",
+      "paid": "Payé",
+      "late": "En retard",
+      "failed": "Échoué"
+    }
+  },
+  "countries": {
+    "BJ": "🇧🇯 Bénin",
+    "BF": "🇧🇫 Burkina Faso",
+    "CI": "🇨🇮 Côte d'Ivoire",
+    "GW": "🇬🇼 Guinée-Bissau",
+    "ML": "🇲🇱 Mali",
+    "NE": "🇳🇪 Niger",
+    "SN": "🇸🇳 Sénégal",
+    "TG": "🇹🇬 Togo"
+  },
+  "dashboard": {
+    "total_agencies": "Total agences",
+    "active_agencies": "Agences actives",
+    "trial_agencies": "En période d'essai",
+    "suspended_agencies": "Agences suspendues",
+    "total_properties": "Total biens",
+    "occupied_properties": "Biens occupés",
+    "available_properties": "Biens disponibles",
+    "monthly_revenue": "Revenus du mois",
+    "pending_payments": "Paiements en attente"
+  }
+}
