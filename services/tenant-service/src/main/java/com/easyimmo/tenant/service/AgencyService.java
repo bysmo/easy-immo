@@ -196,6 +196,15 @@ public class AgencyService {
             .build();
     }
 
+    public java.util.List<AgencyResponse> getActiveAgenciesInternal() {
+        java.util.List<Agency> activeAgencies = agencyRepository.findByStatusIn(
+            java.util.List.of(Agency.AgencyStatus.ACTIVE, Agency.AgencyStatus.TRIAL)
+        );
+        return activeAgencies.stream()
+            .map(this::toResponse)
+            .collect(java.util.stream.Collectors.toList());
+    }
+
     // Classe interne stats
     @lombok.Data
     @lombok.Builder

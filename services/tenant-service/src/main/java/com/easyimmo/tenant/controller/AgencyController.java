@@ -99,6 +99,14 @@ public class AgencyController {
     }
 
     /**
+     * Liste interne des agences actives pour le billing-service (sans auth requis en reseau prive)
+     */
+    @GetMapping("/agencies/internal/active")
+    public ResponseEntity<java.util.List<AgencyResponse>> getActiveAgenciesInternal() {
+        return ResponseEntity.ok(agencyService.getActiveAgenciesInternal());
+    }
+
+    /**
      * Stats dashboard admin SaaS
      */
     @GetMapping("/dashboard/stats")

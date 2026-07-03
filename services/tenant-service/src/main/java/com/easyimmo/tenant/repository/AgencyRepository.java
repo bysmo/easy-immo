@@ -19,6 +19,8 @@ public interface AgencyRepository extends JpaRepository<Agency, UUID> {
 
     Page<Agency> findByStatus(Agency.AgencyStatus status, Pageable pageable);
 
+    java.util.List<Agency> findByStatusIn(java.util.List<Agency.AgencyStatus> statuses);
+
     @Query("SELECT a FROM Agency a WHERE " +
            "LOWER(a.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(a.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
