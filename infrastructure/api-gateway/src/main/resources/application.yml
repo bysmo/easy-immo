@@ -9,6 +9,7 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/easy-immo
+          jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/easy-immo/protocol/openid-connect/certs
 
   data:
     redis:

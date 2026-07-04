@@ -255,11 +255,14 @@ const loadProperties = async () => {
     const res = await api.get(`/properties?${params}`)
     properties.value = res.data.content || []
   } catch (e) {
-    // Fallback Offline Mock
-    properties.value = [
-      { id: '1', reference: 'VIL-002', type: 'VILLA', address: 'Fidjrossé Cotonou', city: 'Cotonou', country: 'BJ', currentRent: 250000, depositMonths: 3, ownerFullName: 'Alain Koffi', status: 'AVAILABLE' },
-      { id: '2', reference: 'APP-105', type: 'APPARTEMENT', address: 'Cocody Riviera', city: 'Abidjan', country: 'CI', currentRent: 300000, depositMonths: 2, ownerFullName: 'Fatou Diop', status: 'OCCUPIED' }
-    ]
+    console.error('Erreur chargement biens', e)
+    properties.value = []
+    toast.add({
+      severity: 'error',
+      summary: 'Erreur',
+      detail: e.response?.data?.message || 'Impossible de charger les biens immobiliers.',
+      life: 4000
+    })
   } finally {
     loading.value = false
   }
@@ -270,10 +273,8 @@ const loadOwners = async () => {
     const res = await api.get('/properties/owners?size=100')
     ownersList.value = res.data.content || []
   } catch (e) {
-    ownersList.value = [
-      { id: '1', fullName: 'Alain Koffi' },
-      { id: '2', fullName: 'Fatou Diop' }
-    ]
+    console.error('Erreur chargement liste propriétaires pour sélecteur', e)
+    ownersList.value = []
   }
 }
 

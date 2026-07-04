@@ -19,10 +19,12 @@ public interface TenantRepository extends JpaRepository<Tenant, UUID> {
 
     boolean existsByPhone(String phone);
 
-    @Query("SELECT DISTINCT t FROM Tenant t JOIN t.leases l WHERE l.agencyId = :agencyId")
+    boolean existsByPhoneAndAgencyId(String phone, UUID agencyId);
+
+    // Utilise agency_id directement — fonctionne même pour les locataires sans bail
     Page<Tenant> findByAgencyId(UUID agencyId, Pageable pageable);
 
-    @Query("SELECT DISTINCT t FROM Tenant t JOIN t.leases l WHERE l.agencyId = :agencyId AND (" +
+    @Query("SELECT t FROM Tenant t WHERE t.agencyId = :agencyId AND (" +
            "LOWER(t.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(t.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "t.phone LIKE CONCAT('%', :search, '%') OR " +

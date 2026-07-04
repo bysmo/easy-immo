@@ -158,17 +158,42 @@ const countries = [
   { label: 'Togo', value: 'TG' }
 ]
 
-const plans = ref([
-  { label: 'Plan Essai (Gratuit 30j)', value: 'TRIAL' },
-  { label: 'Plan Basique', value: 'BASIC' },
-  { label: 'Plan Premium', value: 'PREMIUM' },
-  { label: 'Plan Entreprise', value: 'ENTERPRISE' }
-])
+const plans = ref([])
+
+const formatPrice = (price) => {
+  if (!price || price === 0) return 'Gratuit'
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(price)
+}
+
+onMounted(async () => {
+  try {
+    const res = await api.get('/tenants/plans')
+    plans.value = res.data.map(p => ({
+      label: `${p.displayName} (${formatPrice(p.priceMonthly)}/mois)`,
+      value: p.id
+    }))
+    if (plans.value.length > 0) {
+      form.value.subscriptionPlanId = plans.value[0].value
+    }
+  } catch (e) {
+    console.error('Erreur chargement des plans', e)
+    toast.add({
+      severity: 'error',
+      summary: 'Erreur',
+      detail: 'Impossible de charger les plans d\'abonnement',
+      life: 3000
+    })
+  }
+})
 
 const saveAgency = async () => {
   loading.value = true
   try {
-    await api.post('/tenants/agencies', form.value)
+    const payload = {
+      ...form.value,
+      adminPhone: form.value.phone
+    }
+    await api.post('/tenants/agencies', payload)
     toast.add({ severity: 'success', summary: 'Succès', detail: 'Agence créée avec succès', life: 3000 })
     setTimeout(() => {
       router.push('/admin/agencies')

@@ -17,4 +17,18 @@ public class AgencySecurityService {
         String tokenAgencyId = jwt.getClaimAsString("agency_id");
         return tokenAgencyId != null && tokenAgencyId.equalsIgnoreCase(agencyId.toString());
     }
+
+    public UUID getAgencyId(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof Jwt)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.UNAUTHORIZED, "Non authentifié ou token invalide");
+        }
+        Jwt jwt = (Jwt) authentication.getPrincipal();
+        String tokenAgencyId = jwt.getClaimAsString("agency_id");
+        if (tokenAgencyId == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.FORBIDDEN, "L'attribut d'agence (agency_id) est manquant dans le token");
+        }
+        return UUID.fromString(tokenAgencyId);
+    }
 }

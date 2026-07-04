@@ -120,13 +120,18 @@ const changeLocale = (e) => {
   localStorage.setItem('locale', e.value)
 }
 
-const userName = computed(() =>
-  `${userInfo.firstName} ${userInfo.lastName}`.trim() || userInfo.username
-)
+const userName = computed(() => {
+  const first = userInfo.firstName || ''
+  const last = userInfo.lastName || ''
+  return `${first} ${last}`.trim() || userInfo.username || 'Utilisateur'
+})
 
-const userInitials = computed(() =>
-  `${userInfo.firstName?.[0] || ''}${userInfo.lastName?.[0] || ''}`.toUpperCase() || 'U'
-)
+const userInitials = computed(() => {
+  const first = userInfo.firstName?.[0] || ''
+  const last = userInfo.lastName?.[0] || ''
+  const initials = `${first}${last}`.toUpperCase()
+  return initials || userInfo.username?.[0]?.toUpperCase() || 'U'
+})
 
 const agencyName = ref('Agence Immobilière') // Pourrait être extrait d'un store global Pinia
 

@@ -17,7 +17,7 @@ public class OwnerRequest {
     private String lastName;
 
     @NotBlank(message = "Le téléphone est obligatoire")
-    @Pattern(regexp = "^\\+?[0-9]{8,15}$", message = "Numéro invalide")
+    @Pattern(regexp = "^\\+?[0-9]{8,15}$", message = "Numéro de téléphone invalide")
     private String phone;
 
     @Email(message = "Email invalide")
@@ -30,10 +30,11 @@ public class OwnerRequest {
     private String bankName;
     private String bankAccount;
 
-    @Pattern(regexp = "^\\+?[0-9]{8,15}$", message = "Numéro mobile money invalide")
+    // Mobile money — champs facultatifs, validation uniquement si non vide
+    @Pattern(regexp = "^(\\+?[0-9]{8,15})?$", message = "Numéro mobile money invalide")
     private String mobileMoneyPhone;
 
-    @Pattern(regexp = "^(mtn|orange)$", message = "Provider mobile money invalide (mtn ou orange)")
+    @Pattern(regexp = "^(mtn|orange)?$", message = "Provider mobile money invalide (mtn ou orange)")
     private String mobileMoneyProvider;
 
     @DecimalMin(value = "0.0", inclusive = false, message = "Le pourcentage doit être positif")

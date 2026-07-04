@@ -19,4 +19,6 @@ public class AgencyCreatedEvent {
     private String adminLastName;
     private String adminEmail;
     private String adminPhone;
+    private String adminUsername;
+    private String adminPassword;
 }

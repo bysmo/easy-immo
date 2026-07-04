@@ -24,11 +24,14 @@ public class TenantService {
 
     @Transactional
     public TenantResponse createTenant(UUID agencyId, TenantRequest request) {
-        if (tenantRepository.existsByPhone(request.getPhone())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Un locataire avec ce numéro de téléphone existe déjà");
+        // Vérifier la duplication uniquement au sein de la même agence
+        if (tenantRepository.existsByPhoneAndAgencyId(request.getPhone(), agencyId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Un locataire avec ce numéro de téléphone existe déjà dans votre agence");
         }
 
         Tenant tenant = Tenant.builder()
+            .agencyId(agencyId)
             .firstName(request.getFirstName())
             .lastName(request.getLastName())
             .phone(request.getPhone())
@@ -41,7 +44,7 @@ public class TenantService {
             .build();
 
         tenant = tenantRepository.save(tenant);
-        log.info("Locataire créé : {} {} (ID: {})", tenant.getFirstName(), tenant.getLastName(), tenant.getId());
+        log.info("Locataire créé : {} {} (ID: {}) pour agence {}", tenant.getFirstName(), tenant.getLastName(), tenant.getId(), agencyId);
         return toResponse(tenant);
     }
 
@@ -55,12 +58,12 @@ public class TenantService {
     public TenantResponse getTenant(UUID agencyId, UUID id) {
         Tenant tenant = tenantRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Locataire introuvable"));
-        
-        // Vérification logique que le locataire a ou a eu un bail avec cette agence
-        boolean belongsToAgency = tenant.getLeases().stream()
-            .anyMatch(l -> l.getAgencyId().equals(agencyId));
-            
-        if (!belongsToAgency && tenant.getLeases().size() > 0) {
+
+        // Vérification d'appartenance : soit la colonne agency_id correspond, soit le locataire a un bail avec cette agence
+        boolean belongsToAgency = (tenant.getAgencyId() != null && tenant.getAgencyId().equals(agencyId))
+            || tenant.getLeases().stream().anyMatch(l -> l.getAgencyId().equals(agencyId));
+
+        if (!belongsToAgency) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Accès interdit à ce locataire");
         }
 
@@ -72,6 +75,14 @@ public class TenantService {
         Tenant tenant = tenantRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Locataire introuvable"));
 
+        // Vérification d'appartenance
+        boolean belongsToAgency = (tenant.getAgencyId() != null && tenant.getAgencyId().equals(agencyId))
+            || tenant.getLeases().stream().anyMatch(l -> l.getAgencyId().equals(agencyId));
+
+        if (!belongsToAgency) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Accès interdit à ce locataire");
+        }
+
         tenant.setFirstName(request.getFirstName());
         tenant.setLastName(request.getLastName());
         tenant.setPhone(request.getPhone());
@@ -80,7 +91,7 @@ public class TenantService {
         tenant.setProfession(request.getProfession());
         tenant.setEmergencyContactName(request.getEmergencyContactName());
         tenant.setEmergencyContactPhone(request.getEmergencyContactPhone());
-        
+
         if (request.getKeycloakUserId() != null) {
             tenant.setKeycloakUserId(request.getKeycloakUserId());
         }
@@ -116,7 +127,7 @@ public class TenantService {
                 .build();
             log.info("Inscription d'un nouveau locataire mobile autonome (sans bail actif) : {}", phone);
         }
-        
+
         return toResponse(tenantRepository.save(tenant));
     }
 

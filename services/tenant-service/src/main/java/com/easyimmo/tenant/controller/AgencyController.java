@@ -1,8 +1,10 @@
 package com.easyimmo.tenant.controller;
 
 import com.easyimmo.tenant.dto.AgencyCreateRequest;
+import com.easyimmo.tenant.dto.AgencyUpdateRequest;
 import com.easyimmo.tenant.dto.AgencyResponse;
 import com.easyimmo.tenant.model.Agency;
+import com.easyimmo.tenant.model.SubscriptionPlan;
 import com.easyimmo.tenant.service.AgencyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.easyimmo.tenant.dto.CollaboratorRequest;
+import com.easyimmo.tenant.dto.CollaboratorResponse;
+import com.easyimmo.tenant.service.AgencySecurityService;
+import org.springframework.security.core.Authentication;
 import java.util.Map;
 import java.util.UUID;
 
@@ -23,6 +29,7 @@ import java.util.UUID;
 public class AgencyController {
 
     private final AgencyService agencyService;
+    private final AgencySecurityService agencySecurityService;
 
     /**
      * Créer une agence (admin SaaS seulement)
@@ -70,10 +77,11 @@ public class AgencyController {
      * Modifier une agence
      */
     @PutMapping("/agencies/{id}")
-    @PreAuthorize("hasRole('SAAS_ADMIN')")
+    @PreAuthorize("hasRole('SAAS_ADMIN') or " +
+                  "(hasRole('AGENCY_ADMIN') and @agencySecurityService.isSameAgency(#id, authentication))")
     public ResponseEntity<AgencyResponse> updateAgency(
             @PathVariable UUID id,
-            @Valid @RequestBody AgencyCreateRequest request) {
+            @Valid @RequestBody AgencyUpdateRequest request) {
         return ResponseEntity.ok(agencyService.updateAgency(id, request));
     }
 
@@ -107,11 +115,43 @@ public class AgencyController {
     }
 
     /**
+     * Liste des plans d'abonnement actifs
+     */
+    @GetMapping("/plans")
+    @PreAuthorize("hasRole('SAAS_ADMIN')")
+    public ResponseEntity<java.util.List<SubscriptionPlan>> getActivePlans() {
+        return ResponseEntity.ok(agencyService.getActivePlans());
+    }
+
+    /**
      * Stats dashboard admin SaaS
      */
     @GetMapping("/dashboard/stats")
     @PreAuthorize("hasRole('SAAS_ADMIN')")
     public ResponseEntity<AgencyService.DashboardStats> getDashboardStats() {
         return ResponseEntity.ok(agencyService.getDashboardStats());
+    }
+
+    /**
+     * Lister les collaborateurs de l'agence de l'utilisateur connecté
+     */
+    @GetMapping("/agencies/collaborators")
+    @PreAuthorize("hasAnyRole('AGENCY_ADMIN', 'AGENCY_AGENT')")
+    public ResponseEntity<java.util.List<CollaboratorResponse>> getCollaborators(Authentication authentication) {
+        UUID agencyId = agencySecurityService.getAgencyId(authentication);
+        return ResponseEntity.ok(agencyService.getCollaborators(agencyId));
+    }
+
+    /**
+     * Créer/inviter un collaborateur dans l'agence de l'utilisateur connecté
+     */
+    @PostMapping("/agencies/collaborators")
+    @PreAuthorize("hasRole('AGENCY_ADMIN')")
+    public ResponseEntity<CollaboratorResponse> createCollaborator(
+            @Valid @RequestBody CollaboratorRequest request,
+            Authentication authentication) {
+        UUID agencyId = agencySecurityService.getAgencyId(authentication);
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(agencyService.createCollaborator(agencyId, request));
     }
 }

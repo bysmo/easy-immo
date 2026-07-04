@@ -24,7 +24,7 @@ public class PropertyRequest {
     @Pattern(regexp = "^(BJ|BF|CI|GW|ML|NE|SN|TG)$", message = "Pays UEMOA invalide")
     private String country;
 
-    @Min(value = 1, message = "Le nombre de pièces doit être au moins 1")
+    // rooms est facultatif — pas de @Min qui bloquerait sur null
     private Integer rooms;
 
     private Integer bathrooms;

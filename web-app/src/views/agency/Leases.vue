@@ -202,10 +202,14 @@ const loadLeases = async () => {
     const res = await api.get(`/leases?${params}`)
     leases.value = res.data.content || []
   } catch (e) {
-    // Fallback Offline Mock
-    leases.value = [
-      { id: '1', tenantFullName: 'Mamadou Diallo', tenantPhone: '+22997001122', propertyReference: 'VIL-002', propertyAddress: 'Fidjrossé Cotonou', startDate: '2026-01-01', endDate: '2026-12-31', monthlyRent: 250000, depositAmount: 500000, status: 'ACTIVE' }
-    ]
+    console.error('Erreur chargement contrats', e)
+    leases.value = []
+    toast.add({
+      severity: 'error',
+      summary: 'Erreur',
+      detail: e.response?.data?.message || 'Impossible de charger la liste des baux immobiliers.',
+      life: 4000
+    })
   } finally {
     loading.value = false
   }

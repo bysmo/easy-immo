@@ -26,10 +26,11 @@ public class TenantRequest {
 
     private String nationalId;
     private String profession;
-    
+
     private String emergencyContactName;
-    
-    @Pattern(regexp = "^\\+?[0-9]{8,15}$", message = "Numéro de contact d'urgence invalide")
+
+    // Contact urgence facultatif — validation seulement si non vide
+    @Pattern(regexp = "^(\\+?[0-9]{8,15})?$", message = "Numéro de contact d'urgence invalide")
     private String emergencyContactPhone;
 
     private String keycloakUserId;

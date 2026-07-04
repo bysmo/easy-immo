@@ -25,6 +25,9 @@ public class Tenant {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "agency_id")
+    private UUID agencyId; // L'agence qui a créé ce locataire
+
     @Column(name = "keycloak_user_id", unique = true)
     private String keycloakUserId; // Lié au compte Keycloak une fois inscrit sur mobile
 

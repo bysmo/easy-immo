@@ -90,13 +90,18 @@ const changeLocale = (e) => {
   localStorage.setItem('locale', e.value)
 }
 
-const userName = computed(() =>
-  `${userInfo.firstName} ${userInfo.lastName}`.trim() || userInfo.username
-)
+const userName = computed(() => {
+  const first = userInfo.firstName || ''
+  const last = userInfo.lastName || ''
+  return `${first} ${last}`.trim() || userInfo.username || 'Admin'
+})
 
-const userInitials = computed(() =>
-  `${userInfo.firstName?.[0] || ''}${userInfo.lastName?.[0] || ''}`.toUpperCase() || 'A'
-)
+const userInitials = computed(() => {
+  const first = userInfo.firstName?.[0] || ''
+  const last = userInfo.lastName?.[0] || ''
+  const initials = `${first}${last}`.toUpperCase()
+  return initials || userInfo.username?.[0]?.toUpperCase() || 'A'
+})
 
 const currentPageTitle = computed(() => {
   const name = route.name || ''

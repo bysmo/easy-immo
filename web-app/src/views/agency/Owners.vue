@@ -208,16 +208,18 @@ const loadOwners = async () => {
   try {
     const params = new URLSearchParams()
     if (searchQuery.value) params.append('search', searchQuery.value)
-    
-    // Appel direct au microservice properties via api-gateway
+
     const res = await api.get(`/properties/owners?${params}`)
     owners.value = res.data.content || []
   } catch (e) {
-    // Mode offline/mock fallback s'il n'y a pas de connexion DB
-    owners.value = [
-      { id: '1', fullName: 'Alain Koffi', phone: '+22997000102', email: 'alain.koffi@yahoo.com', sharePercentage: 80, bankName: 'BOA Benin', propertyCount: 3 },
-      { id: '2', fullName: 'Fatou Diop', phone: '+221771234567', email: 'fatou.diop@gmail.com', sharePercentage: 85, mobileMoneyPhone: '+221771234567', mobileMoneyProvider: 'orange', propertyCount: 2 }
-    ]
+    console.error('Erreur chargement propriétaires', e)
+    owners.value = []
+    toast.add({
+      severity: 'error',
+      summary: 'Erreur',
+      detail: e.response?.data?.message || 'Impossible de charger les propriétaires. Vérifiez que le service est disponible.',
+      life: 4000
+    })
   } finally {
     loading.value = false
   }

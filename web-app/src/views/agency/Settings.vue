@@ -147,23 +147,79 @@
             </DataTable>
           </div>
         </div>
-
       </div>
     </div>
+
+    <!-- Dialog pour inviter un agent -->
+    <Dialog v-model:visible="agentDialog" header="Inviter un collaborateur" :modal="true" style="width: 500px">
+      <div class="grid-2 mb-2">
+        <div class="form-group">
+          <label class="form-label">Prénom *</label>
+          <InputText v-model="agentForm.firstName" required style="width: 100%" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nom *</label>
+          <InputText v-model="agentForm.lastName" required style="width: 100%" />
+        </div>
+      </div>
+
+      <div class="form-group mb-2">
+        <label class="form-label">Email de l'agent *</label>
+        <InputText type="email" v-model="agentForm.email" required style="width: 100%" />
+      </div>
+
+      <div class="grid-2 mb-2">
+        <div class="form-group">
+          <label class="form-label">Téléphone</label>
+          <InputText v-model="agentForm.phone" style="width: 100%" placeholder="+225 01020304" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Rôle *</label>
+          <Select
+            v-model="agentForm.role"
+            :options="roleOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Sélectionner le rôle"
+            style="width: 100%"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="form-group mb-2">
+        <label class="form-label">Identifiant (Username) *</label>
+        <InputText v-model="agentForm.username" required style="width: 100%" />
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label">Mot de passe provisoire *</label>
+        <InputText type="password" v-model="agentForm.password" required style="width: 100%" placeholder="••••••••" />
+        <small class="text-muted">L'agent sera invité à changer ce mot de passe à sa première connexion.</small>
+      </div>
+
+      <template #footer>
+        <Button label="Annuler" severity="secondary" outlined @click="agentDialog = false" />
+        <Button label="Créer l'agent" severity="primary" @click="saveAgent" :loading="savingAgent" />
+      </template>
+    </Dialog>
 
     <Toast />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
+import Dialog from 'primevue/dialog'
 import Toast from 'primevue/toast'
+import api from '@/services/api'
+import { getUserInfo } from '@/services/keycloak'
 
 const toast = useToast()
 const activeTab = ref('profile')
@@ -175,13 +231,17 @@ const tabs = [
   { id: 'team', label: 'Agents & Collaborateurs', icon: 'pi pi-users' }
 ]
 
+const userInfo = getUserInfo()
+const agencyId = userInfo.agencyId
+
 const profile = ref({
-  name: 'Sénégal Immobilier SAS',
-  phone: '+221 33 824 00 00',
-  email: 'contact@senegalimmo.sn',
-  city: 'Dakar',
-  address: 'Avenue Cheikh Anta Diop, Fann',
-  ifu: '1202612345678'
+  name: '',
+  phone: '',
+  email: '',
+  city: '',
+  address: '',
+  ifu: '',
+  country: ''
 })
 
 const payments = ref({
@@ -210,18 +270,132 @@ const reminderOptions = [
   { label: 'Pas de rappel automatique', value: -1 }
 ]
 
-const team = ref([
-  { id: 1, fullName: 'Amadou Diop', role: 'Administrateur', email: 'amadou@senegalimmo.sn', status: 'Actif' },
-  { id: 2, fullName: 'Fatou Sow', role: 'Agent Immobilier', email: 'fatou@senegalimmo.sn', status: 'Actif' },
-  { id: 3, fullName: 'Ibrahima Ndiaye', role: 'Agent Commercial', email: 'ibrahima@senegalimmo.sn', status: 'Invité' }
-])
+const team = ref([])
+const agentDialog = ref(false)
+const savingAgent = ref(false)
+const agentForm = ref({
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  username: '',
+  password: '',
+  role: 'AGENCY_AGENT'
+})
 
-const saveAllSettings = () => {
-  toast.add({ severity: 'success', summary: 'Configuration sauvée', detail: 'Modifications enregistrées avec succès', life: 3000 })
+const roleOptions = [
+  { label: 'Agent Immobilier', value: 'AGENCY_AGENT' },
+  { label: 'Administrateur d\'Agence', value: 'AGENCY_ADMIN' }
+]
+
+const fetchCollaborators = async () => {
+  try {
+    const res = await api.get('/tenants/agencies/collaborators')
+    team.value = res.data.map(c => ({
+      id: c.id,
+      fullName: c.fullName,
+      role: c.role === 'AGENCY_ADMIN' ? 'Administrateur' : 'Agent',
+      email: c.email,
+      status: c.status === 'ACTIVE' ? 'Actif' : c.status === 'INVITED' ? 'Invité' : 'Inactif'
+    }))
+  } catch (e) {
+    console.error('Erreur chargement collaborateurs', e)
+    toast.add({
+      severity: 'error',
+      summary: 'Erreur',
+      detail: 'Impossible de charger la liste des collaborateurs',
+      life: 3000
+    })
+  }
+}
+
+const fetchAgencyProfile = async () => {
+  if (!agencyId) return
+  try {
+    const res = await api.get(`/tenants/agencies/${agencyId}`)
+    profile.value = {
+      name: res.data.name,
+      phone: res.data.phone,
+      email: res.data.email,
+      city: res.data.city,
+      address: res.data.address || '',
+      ifu: '',
+      country: res.data.country || 'BF'
+    }
+  } catch (e) {
+    console.error('Erreur chargement profil agence', e)
+    toast.add({
+      severity: 'error',
+      summary: 'Erreur',
+      detail: 'Impossible de charger le profil de l\'agence',
+      life: 3000
+    })
+  }
+}
+
+onMounted(() => {
+  fetchAgencyProfile()
+  fetchCollaborators()
+})
+
+const saveAllSettings = async () => {
+  if (!agencyId) return
+  try {
+    await api.put(`/tenants/agencies/${agencyId}`, {
+      name: profile.value.name,
+      phone: profile.value.phone,
+      address: profile.value.address,
+      city: profile.value.city,
+      country: profile.value.country || 'BF'
+    })
+    toast.add({ severity: 'success', summary: 'Configuration sauvée', detail: 'Modifications enregistrées avec succès', life: 3000 })
+  } catch (e) {
+    console.error('Erreur sauvegarde profil agence', e)
+    toast.add({
+      severity: 'error',
+      summary: 'Erreur',
+      detail: e.response?.data?.message || 'Impossible de sauvegarder le profil de l\'agence',
+      life: 3000
+    })
+  }
 }
 
 const inviteAgent = () => {
-  toast.add({ severity: 'info', summary: 'Invitation', detail: 'Invitation envoyée par e-mail', life: 3000 })
+  agentDialog.value = true
+}
+
+const saveAgent = async () => {
+  if (!agentForm.value.firstName || !agentForm.value.lastName || !agentForm.value.email || !agentForm.value.username || !agentForm.value.password || !agentForm.value.role) {
+    toast.add({ severity: 'warn', summary: 'Attention', detail: 'Veuillez remplir tous les champs obligatoires', life: 3000 })
+    return
+  }
+  savingAgent.value = true
+  try {
+    await api.post('/tenants/agencies/collaborators', agentForm.value)
+    toast.add({ severity: 'success', summary: 'Succès', detail: 'Collaborateur invité avec succès', life: 3000 })
+    agentDialog.value = false
+    fetchCollaborators()
+    // Reset form
+    agentForm.value = {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      username: '',
+      password: '',
+      role: 'AGENCY_AGENT'
+    }
+  } catch (e) {
+    console.error('Erreur invitation collaborateur', e)
+    toast.add({
+      severity: 'error',
+      summary: 'Erreur',
+      detail: e.response?.data?.message || 'Impossible d\'inviter le collaborateur',
+      life: 3000
+    })
+  } finally {
+    savingAgent.value = false
+  }
 }
 </script>
 

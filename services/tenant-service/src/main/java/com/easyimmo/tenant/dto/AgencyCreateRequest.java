@@ -44,4 +44,12 @@ public class AgencyCreateRequest {
 
     @NotBlank(message = "Le téléphone de l'admin est obligatoire")
     private String adminPhone;
+
+    @NotBlank(message = "Le nom d'utilisateur de l'admin est obligatoire")
+    @Size(min = 3, max = 50)
+    private String adminUsername;
+
+    @NotBlank(message = "Le mot de passe provisoire est obligatoire")
+    @Size(min = 6, message = "Le mot de passe doit contenir au moins 6 caractères")
+    private String adminPassword;
 }

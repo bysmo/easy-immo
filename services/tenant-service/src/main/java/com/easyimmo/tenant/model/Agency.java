@@ -31,7 +31,7 @@ public class Agency {
 
     private String city;
 
-    @Column(length = 5)
+    @Column(columnDefinition = "char")
     private String country;  // ISO: BJ, CI, SN, BF, ML, NE, TG, GW
 
     @Column(length = 20)

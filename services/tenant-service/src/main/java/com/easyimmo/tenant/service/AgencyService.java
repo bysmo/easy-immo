@@ -1,6 +1,7 @@
 package com.easyimmo.tenant.service;
 
 import com.easyimmo.tenant.dto.AgencyCreateRequest;
+import com.easyimmo.tenant.dto.AgencyUpdateRequest;
 import com.easyimmo.tenant.dto.AgencyResponse;
 import com.easyimmo.tenant.event.AgencyCreatedEvent;
 import com.easyimmo.tenant.model.Agency;
@@ -19,6 +20,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.easyimmo.tenant.model.Collaborator;
+import com.easyimmo.tenant.repository.CollaboratorRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -32,6 +35,8 @@ public class AgencyService {
     private final SubscriptionPlanRepository planRepository;
     private final AgencySubscriptionRepository subscriptionRepository;
     private final RabbitTemplate rabbitTemplate;
+    private final KeycloakService keycloakService;
+    private final CollaboratorRepository collaboratorRepository;
 
     @Transactional
     public AgencyResponse createAgency(AgencyCreateRequest request) {
@@ -81,7 +86,31 @@ public class AgencyService {
             subscriptionRepository.save(subscription);
         }
 
-        // Publier l'event sur RabbitMQ (pour créer l'admin dans Keycloak)
+        // 1. Créer l'admin de l'agence dans Keycloak
+        String keycloakUserId = keycloakService.createUser(
+            request.getAdminUsername(),
+            request.getAdminEmail(),
+            request.getAdminFirstName(),
+            request.getAdminLastName(),
+            request.getAdminPassword(),
+            agency.getId().toString(),
+            "AGENCY_ADMIN"
+        );
+
+        // 2. Enregistrer l'admin localement comme Collaborator
+        Collaborator adminCollaborator = Collaborator.builder()
+            .keycloakUserId(keycloakUserId)
+            .agency(agency)
+            .firstName(request.getAdminFirstName())
+            .lastName(request.getAdminLastName())
+            .email(request.getAdminEmail())
+            .phone(request.getAdminPhone())
+            .role("AGENCY_ADMIN")
+            .status(Collaborator.CollaboratorStatus.ACTIVE)
+            .build();
+        collaboratorRepository.save(adminCollaborator);
+
+        // Publier l'event sur RabbitMQ (pour notifier et envoyer l'email de bienvenue)
         AgencyCreatedEvent event = AgencyCreatedEvent.builder()
             .agencyId(agency.getId())
             .agencyName(agency.getName())
@@ -90,6 +119,8 @@ public class AgencyService {
             .adminLastName(request.getAdminLastName())
             .adminEmail(request.getAdminEmail())
             .adminPhone(request.getAdminPhone())
+            .adminUsername(request.getAdminUsername())
+            .adminPassword(request.getAdminPassword())
             .build();
 
         rabbitTemplate.convertAndSend(
@@ -98,7 +129,7 @@ public class AgencyService {
             event
         );
 
-        log.info("Agence créée : {} ({})", agency.getName(), agency.getId());
+        log.info("Agence créée : {} ({}) avec son administrateur Keycloak ID {}", agency.getName(), agency.getId(), keycloakUserId);
         return toResponse(agency);
     }
 
@@ -121,7 +152,7 @@ public class AgencyService {
     }
 
     @Transactional
-    public AgencyResponse updateAgency(UUID id, AgencyCreateRequest request) {
+    public AgencyResponse updateAgency(UUID id, AgencyUpdateRequest request) {
         Agency agency = agencyRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agence introuvable"));
 
@@ -203,6 +234,80 @@ public class AgencyService {
         return activeAgencies.stream()
             .map(this::toResponse)
             .collect(java.util.stream.Collectors.toList());
+    }
+
+    public java.util.List<SubscriptionPlan> getActivePlans() {
+        return planRepository.findByIsActiveTrue();
+    }
+
+    public java.util.List<com.easyimmo.tenant.dto.CollaboratorResponse> getCollaborators(UUID agencyId) {
+        return collaboratorRepository.findByAgencyId(agencyId).stream()
+            .map(this::toCollaboratorResponse)
+            .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Transactional
+    public com.easyimmo.tenant.dto.CollaboratorResponse createCollaborator(UUID agencyId, com.easyimmo.tenant.dto.CollaboratorRequest request) {
+        // Vérifier unicité email
+        if (collaboratorRepository.existsByEmail(request.getEmail())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Un collaborateur avec cet email existe déjà");
+        }
+
+        Agency agency = agencyRepository.findById(agencyId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agence introuvable"));
+
+        // Vérifier la limite d'agents du plan de l'agence
+        if (agency.getSubscriptionPlan() != null && agency.getSubscriptionPlan().getMaxAgents() != -1) {
+            long currentAgents = collaboratorRepository.findByAgencyId(agencyId).size();
+            if (currentAgents >= agency.getSubscriptionPlan().getMaxAgents()) {
+                throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                    "Limite d'agents atteinte pour votre abonnement (" + agency.getSubscriptionPlan().getMaxAgents() + ")");
+            }
+        }
+
+        // 1. Créer l'agent dans Keycloak
+        String keycloakUserId = keycloakService.createUser(
+            request.getUsername(),
+            request.getEmail(),
+            request.getFirstName(),
+            request.getLastName(),
+            request.getPassword(),
+            agencyId.toString(),
+            request.getRole()
+        );
+
+        // 2. Créer l'agent localement
+        Collaborator collaborator = Collaborator.builder()
+            .keycloakUserId(keycloakUserId)
+            .agency(agency)
+            .firstName(request.getFirstName())
+            .lastName(request.getLastName())
+            .email(request.getEmail())
+            .phone(request.getPhone())
+            .role(request.getRole())
+            .status(Collaborator.CollaboratorStatus.ACTIVE)
+            .build();
+
+        collaborator = collaboratorRepository.save(collaborator);
+
+        log.info("Collaborateur/agent {} créé pour l'agence {}", collaborator.getEmail(), agencyId);
+        return toCollaboratorResponse(collaborator);
+    }
+
+    private com.easyimmo.tenant.dto.CollaboratorResponse toCollaboratorResponse(Collaborator collaborator) {
+        return com.easyimmo.tenant.dto.CollaboratorResponse.builder()
+            .id(collaborator.getId())
+            .keycloakUserId(collaborator.getKeycloakUserId())
+            .agencyId(collaborator.getAgency().getId())
+            .firstName(collaborator.getFirstName())
+            .lastName(collaborator.getLastName())
+            .fullName(collaborator.getFirstName() + " " + collaborator.getLastName())
+            .email(collaborator.getEmail())
+            .phone(collaborator.getPhone())
+            .role(collaborator.getRole())
+            .status(collaborator.getStatus().name())
+            .createdAt(collaborator.getCreatedAt())
+            .build();
     }
 
     // Classe interne stats

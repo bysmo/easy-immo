@@ -180,11 +180,14 @@ const loadTenants = async () => {
     const res = await api.get(`/leases/tenants?${params}`)
     tenants.value = res.data.content || []
   } catch (e) {
-    // Fallback Offline Mock
-    tenants.value = [
-      { id: '1', fullName: 'Mamadou Diallo', phone: '+22997001122', email: 'mamadou@momo.com', profession: 'Comptable', hasActiveLease: true, emergencyContactName: 'Awa Diallo', emergencyContactPhone: '+22997001123' },
-      { id: '2', fullName: 'Koffi Mensah', phone: '+22890123456', email: 'koffi@mensah.org', profession: 'Ingénieur', hasActiveLease: false, keycloakUserId: 'user-02' }
-    ]
+    console.error('Erreur chargement locataires', e)
+    tenants.value = []
+    toast.add({
+      severity: 'error',
+      summary: 'Erreur',
+      detail: e.response?.data?.message || 'Impossible de charger les locataires.',
+      life: 4000
+    })
   } finally {
     loading.value = false
   }
