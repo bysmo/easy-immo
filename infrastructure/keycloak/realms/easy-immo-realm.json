@@ -3,7 +3,7 @@
   "displayName": "Easy-Immo Platform",
   "displayNameHtml": "<strong>Easy-Immo</strong>",
   "enabled": true,
-  "sslRequired": "external",
+  "sslRequired": "none",
   "registrationAllowed": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
@@ -61,7 +61,37 @@
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256"
-      }
+      },
+      "protocolMappers": [
+        {
+          "name": "realm-roles-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "agency-id-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "agency_id",
+            "claim.name": "agency_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
     },
     {
       "clientId": "easy-immo-mobile",
@@ -91,7 +121,6 @@
       "webOrigins": []
     }
   ],
-  "protocolMappers": [],
   "clientScopes": [
     {
       "name": "agency-id",
@@ -129,7 +158,7 @@
         {
           "type": "password",
           "value": "Admin@12345",
-          "temporary": true
+          "temporary": false
         }
       ],
       "realmRoles": ["SAAS_ADMIN"]

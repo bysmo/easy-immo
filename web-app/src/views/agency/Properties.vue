@@ -61,7 +61,7 @@
         <Column field="currentRent" header="Loyer Mensuel" sortable>
           <template #body="{ data }">
             <span class="currency">{{ formatCurrency(data.currentRent) }}</span>
-          </small></template>
+          </template>
         </Column>
 
         <Column field="ownerFullName" header="Propriétaire">

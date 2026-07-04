@@ -1,7 +1,16 @@
-FROM eclipse-temurin:21-jre-alpine AS runtime
+# -- Stage 1 : Build Maven --
+FROM maven:3.9-eclipse-temurin-23-alpine AS build
+WORKDIR /build
+COPY pom.xml .
+RUN mvn dependency:go-offline -q
+COPY src ./src
+RUN mvn clean package -DskipTests -q
+
+# -- Stage 2 : Runtime --
+FROM eclipse-temurin:23-jre-alpine AS runtime
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
-COPY target/*.jar app.jar
+COPY --from=build /build/target/*.jar app.jar
 USER app
-EXPOSE 8088
+EXPOSE 8089
 ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

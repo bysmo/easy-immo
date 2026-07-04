@@ -23,7 +23,7 @@ CREATE TABLE agencies (
     logo_url TEXT,
     address TEXT,
     city VARCHAR(100),
-    country CHAR(2) NOT NULL DEFAULT 'BJ',
+    country VARCHAR(5) NOT NULL DEFAULT 'BF',
     phone VARCHAR(20),
     email VARCHAR(150) NOT NULL UNIQUE,
     status VARCHAR(20) NOT NULL DEFAULT 'TRIAL'

@@ -31,7 +31,7 @@ CREATE TABLE properties (
     type VARCHAR(30) NOT NULL CHECK (type IN ('APPARTEMENT', 'VILLA', 'STUDIO', 'BOUTIQUE', 'BUREAU', 'ENTREPOT', 'CHAMBRE', 'DUPLEX')),
     address TEXT NOT NULL,
     city VARCHAR(100),
-    country CHAR(2) NOT NULL DEFAULT 'BJ',
+    country VARCHAR(5) NOT NULL DEFAULT 'BF',
     rooms INTEGER,
     bathrooms INTEGER,
     area_sqm DECIMAL(8,2),

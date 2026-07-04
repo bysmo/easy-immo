@@ -1,4 +1,3 @@
-
 networks:
   easy-immo-net:
     driver: bridge
@@ -32,7 +31,7 @@ services:
       - "--log.level=INFO"
     ports:
       - "8000:80"
-      - "8090:8080"   # Traefik dashboard
+      - "8090:8080" # Traefik dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -75,7 +74,7 @@ services:
       POSTGRES_USER: keycloak
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      test: [ "CMD-SHELL", "pg_isready -U keycloak" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -95,7 +94,7 @@ services:
       - easy-immo-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -117,7 +116,7 @@ services:
       - easy-immo-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -138,7 +137,7 @@ services:
       - easy-immo-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: [ "CMD", "mc", "ready", "local" ]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -156,8 +155,8 @@ services:
     image: axllent/mailpit:latest
     container_name: easy-mailpit
     ports:
-      - "1025:1025"   # SMTP
-      - "8025:8025"   # Web UI
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
     networks:
       - easy-immo-net
     restart: unless-stopped
@@ -192,32 +191,35 @@ services:
   # SPRING CLOUD INFRASTRUCTURE
   # ═══════════════════════════════════════════════════════
 
+  # FIX 1: Chemin de build corrigé (était ./services/config-server qui n'existe pas)
   config-server:
     build:
-      context: ./services/config-server
+      context: ./infrastructure/config-server
       dockerfile: Dockerfile
     container_name: easy-config-server
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: docker, native
     ports:
       - "8888:8888"
     networks:
       - easy-immo-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:8888/actuator/health" ]
       interval: 20s
       timeout: 10s
       retries: 5
 
+  # FIX 2: Chemin de build corrigé + hostname pour le réseau Docker
   eureka-server:
     build:
-      context: ./services/eureka-server
+      context: ./infrastructure/eureka-server
       dockerfile: Dockerfile
     container_name: easy-eureka
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_INSTANCE_HOSTNAME: eureka-server
     ports:
       - "8761:8761"
     depends_on:
@@ -227,20 +229,22 @@ services:
       - easy-immo-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:8761/actuator/health" ]
       interval: 20s
       timeout: 10s
       retries: 5
 
+  # FIX 3: Chemin de build corrigé + EUREKA_URL ajouté
   api-gateway:
     build:
-      context: ./services/api-gateway
+      context: ./infrastructure/api-gateway
       dockerfile: Dockerfile
     container_name: easy-gateway
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
       KEYCLOAK_URL: http://keycloak:8080
+      EUREKA_URL: http://eureka-server:8761/eureka/
     ports:
       - "8080:8080"
     depends_on:
@@ -262,6 +266,7 @@ services:
   # BUSINESS MICROSERVICES
   # ═══════════════════════════════════════════════════════
 
+  # FIX 4: EUREKA_URL ajouté — en Docker, localhost ne résout PAS vers eureka-server
   tenant-service:
     build:
       context: ./services/tenant-service
@@ -270,11 +275,13 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://db-tenant:5432/easy_immo_tenant
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: ${RABBITMQ_USER:-easy}
       RABBITMQ_PASS: ${RABBITMQ_PASS:-easy123}
+      LOGGING_FILE_NAME: /app/logs/tenant-service.log
     ports:
       - "8082:8082"
     depends_on:
@@ -284,6 +291,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    volumes:
+      - ./logs/tenant-service:/app/logs
     networks:
       - easy-immo-net
     restart: unless-stopped
@@ -296,11 +305,13 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://db-property:5432/easy_immo_property
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      LOGGING_FILE_NAME: /app/logs/property-service.log
     ports:
       - "8083:8083"
     depends_on:
@@ -310,6 +321,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
+    volumes:
+      - ./logs/property-service:/app/logs
     networks:
       - easy-immo-net
     restart: unless-stopped
@@ -322,6 +335,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://db-lease:5432/easy_immo_lease
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
       RABBITMQ_HOST: rabbitmq
@@ -346,6 +360,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://db-payment:5432/easy_immo_payment
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
       RABBITMQ_HOST: rabbitmq
@@ -353,6 +368,7 @@ services:
       MTN_MOMO_SUBSCRIPTION_KEY: ${MTN_MOMO_SUBSCRIPTION_KEY}
       ORANGE_MONEY_CLIENT_ID: ${ORANGE_MONEY_CLIENT_ID}
       ORANGE_MONEY_CLIENT_SECRET: ${ORANGE_MONEY_CLIENT_SECRET}
+      LOGGING_FILE_NAME: /app/logs/payment-service.log
     ports:
       - "8085:8085"
     depends_on:
@@ -360,10 +376,13 @@ services:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
+    volumes:
+      - ./logs/payment-service:/app/logs
     networks:
       - easy-immo-net
     restart: unless-stopped
 
+  # FIX 7: Ajout de la datasource manquante + volume pgdata-notification (utilisé ici)
   document-service:
     build:
       context: ./services/document-service
@@ -372,12 +391,17 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-document:5432/easy_immo_document
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
     ports:
       - "8086:8086"
     depends_on:
+      db-document:
+        condition: service_healthy
       eureka-server:
         condition: service_healthy
       minio:
@@ -386,6 +410,7 @@ services:
       - easy-immo-net
     restart: unless-stopped
 
+  # FIX 5: Port corrigé — application.yml déclare 8089, pas 8087
   notification-service:
     build:
       context: ./services/notification-service
@@ -394,6 +419,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://eureka-server:8761/eureka/
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: ${RABBITMQ_USER:-easy}
       RABBITMQ_PASS: ${RABBITMQ_PASS:-easy123}
@@ -402,17 +428,21 @@ services:
       AFRICAS_TALKING_USERNAME: ${AFRICAS_TALKING_USERNAME:-sandbox}
       SPRING_MAIL_HOST: mailpit
       SPRING_MAIL_PORT: 1025
+      LOGGING_FILE_NAME: /app/logs/notification-service.log
     ports:
-      - "8087:8087"
+      - "8089:8088"
     depends_on:
       eureka-server:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    volumes:
+      - ./logs/notification-service:/app/logs
     networks:
       - easy-immo-net
     restart: unless-stopped
 
+  # FIX 6: Port corrigé — application.yml déclare 8087, pas 8088
   billing-service:
     build:
       context: ./services/billing-service
@@ -421,10 +451,11 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://db-billing:5432/easy_immo_billing
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
     ports:
-      - "8088:8088"
+      - "8087:8087"
     depends_on:
       db-billing:
         condition: service_healthy
@@ -472,7 +503,7 @@ services:
       - easy-immo-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U easy_user -d easy_immo_tenant"]
+      test: [ "CMD-SHELL", "pg_isready -U easy_user -d easy_immo_tenant" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -492,7 +523,7 @@ services:
       - easy-immo-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U easy_user -d easy_immo_property"]
+      test: [ "CMD-SHELL", "pg_isready -U easy_user -d easy_immo_property" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -512,7 +543,7 @@ services:
       - easy-immo-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U easy_user -d easy_immo_lease"]
+      test: [ "CMD-SHELL", "pg_isready -U easy_user -d easy_immo_lease" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -532,7 +563,27 @@ services:
       - easy-immo-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U easy_user -d easy_immo_payment"]
+      test: [ "CMD-SHELL", "pg_isready -U easy_user -d easy_immo_payment" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db-document:
+    image: postgres:16-alpine
+    container_name: easy-db-document
+    environment:
+      POSTGRES_DB: easy_immo_document
+      POSTGRES_USER: easy_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pgpass123}
+    volumes:
+      - pgdata-notification:/var/lib/postgresql/data
+    ports:
+      - "5438:5432"
+    networks:
+      - easy-immo-net
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U easy_user -d easy_immo_document" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -552,7 +603,7 @@ services:
       - easy-immo-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U easy_user -d easy_immo_billing"]
+      test: [ "CMD-SHELL", "pg_isready -U easy_user -d easy_immo_billing" ]
       interval: 10s
       timeout: 5s
       retries: 5

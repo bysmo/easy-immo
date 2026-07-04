@@ -27,3 +27,15 @@ logging:
   level:
     com.easyimmo: DEBUG
     org.springframework.security: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/easy-immo
+          jwk-set-uri: http://keycloak:8080/realms/easy-immo/protocol/openid-connect/certs

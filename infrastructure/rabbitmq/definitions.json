@@ -1,5 +1,22 @@
 {
+  "users": [
+    {
+      "name": "easy",
+      "password_hash": "EjRWeCxJvRjTXPF8NnfpqThodFf+WZlJfI43pjeLvFvS3MQy",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": ["administrator"]
+    }
+  ],
   "vhosts": [{"name": "/"}],
+  "permissions": [
+    {
+      "user": "easy",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
   "exchanges": [
     {"name": "easy-immo.exchange", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false}
   ],

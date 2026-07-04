@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { isSaasAdmin, isAgencyAdmin, isAgencyAgent } from '@/services/keycloak'
+import keycloak, { isSaasAdmin, isAgencyAdmin, isAgencyAgent } from '@/services/keycloak'
 
 // Layouts
 const AdminLayout = () => import('@/layouts/AdminLayout.vue')
@@ -74,6 +74,8 @@ const router = createRouter({
     {
       path: '/',
       redirect: () => {
+        // Keycloak est déjà initialisé ici (main.js attend l'init)
+        if (!keycloak.authenticated) return '/unauthorized'
         if (isSaasAdmin()) return '/admin/dashboard'
         if (isAgencyAdmin() || isAgencyAgent()) return '/agency/dashboard'
         return '/unauthorized'
@@ -94,12 +96,17 @@ const router = createRouter({
   ]
 })
 
-// Guards de navigation
+// Guards de navigation — protège les routes
 router.beforeEach((to) => {
+  // Si Keycloak n'est pas encore authentifié, laisser passer (main.js gère le login-required)
+  if (!keycloak.authenticated) return true
+
   if (to.meta.requiresSaasAdmin && !isSaasAdmin()) {
+    console.warn(`[Router] Accès refusé à ${to.path} — rôle requis: SAAS_ADMIN, rôles actuels:`, keycloak.tokenParsed?.realm_access?.roles)
     return '/unauthorized'
   }
   if (to.meta.requiresAgency && !isAgencyAdmin() && !isAgencyAgent()) {
+    console.warn(`[Router] Accès refusé à ${to.path} — rôle requis: AGENCY_ADMIN/AGENT, rôles actuels:`, keycloak.tokenParsed?.realm_access?.roles)
     return '/unauthorized'
   }
 })

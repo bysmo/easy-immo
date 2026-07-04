@@ -27,12 +27,12 @@
 easy-immo/
 ├── docker-compose.yml          # Dev local
 ├── docker-compose.prod.yml     # Production (Docker Swarm)
-├── infrastructure/             # Traefik, Keycloak, Prometheus, Grafana
+├── infrastructure/             # Traefik, Keycloak, Prometheus  Grafana, config-server, eureka-server, api-gateway
+│   ├── config-server/          # Configuration centralisée
+│   ├── eureka-server/          # Service Discovery
+│   └── api-gateway/            # API Gateway
 ├── config-repo/                # Configs centralisées (lues par Config Server)
-├── services/
-│   ├── config-server/
-│   ├── eureka-server/
-│   ├── api-gateway/
+├── services/                   # Microservices métier (Business)
 │   ├── tenant-service/
 │   ├── property-service/
 │   ├── lease-service/
@@ -65,14 +65,16 @@ docker compose up -d
 docker compose exec keycloak /opt/keycloak/bin/kc.sh import \
   --file /opt/keycloak/data/import/easy-immo-realm.json
 
-# 4. Lancer les services Spring Boot (dans chaque dossier)
-cd services/config-server && mvn spring-boot:run &
-cd services/eureka-server && mvn spring-boot:run &
-cd services/api-gateway && mvn spring-boot:run &
+# 4. Lancer les services Spring Boot d'infrastructure
+cd infrastructure/config-server && mvn spring-boot:run &
+cd infrastructure/eureka-server && mvn spring-boot:run &
+cd infrastructure/api-gateway && mvn spring-boot:run &
+
+# 5. Lancer les services Spring Boot métier
 cd services/tenant-service && mvn spring-boot:run &
 
-# 5. Lancer le frontend Vue.js
-cd web-app && npm install && npm run dev
+# 6. Lancer le frontend Vue.js
+cd web-app && npm install && npm run build && npm run dev
 ```
 
 ### URLs de développement
