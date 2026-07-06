@@ -49,7 +49,7 @@ public class Property {
     @Column(length = 100)
     private String city;
 
-    @Column(length = 5)
+    @Column(columnDefinition = "char")
     private String country;
 
     @Column

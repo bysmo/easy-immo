@@ -104,7 +104,9 @@
         "easyimmo://auth/*",
         "exp://localhost:8081/*"
       ],
-      "webOrigins": ["*"],
+      "webOrigins": [
+        "*"
+      ],
       "attributes": {
         "pkce.code.challenge.method": "S256"
       }
@@ -161,7 +163,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["SAAS_ADMIN"]
+      "realmRoles": [
+        "SAAS_ADMIN"
+      ]
     }
   ],
   "browserFlow": "browser",
